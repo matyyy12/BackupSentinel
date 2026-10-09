@@ -27,7 +27,7 @@ RUN mkdir -p /data/backups && chown app:app /data/backups
 WORKDIR /service
 
 COPY --from=builder /service/.venv /service/.venv
-COPY app ./app
+COPY backup_app ./backup_app
 COPY main.py database.py alembic.ini ./
 COPY migrations ./migrations
 
