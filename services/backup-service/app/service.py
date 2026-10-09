@@ -1,0 +1,44 @@
+import uuid
+
+from fastapi import UploadFile, HTTPException
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.models import Backup
+from app.repository import BackupRepository
+from app.schemas import BackupResponse
+from app.storage import save_file, delete_file
+
+
+class BackupService:
+    def __init__(self, repository: BackupRepository):
+        self.repository: BackupRepository = repository
+
+    async def upload_file(self, file: UploadFile, postgres_version: str) -> BackupResponse:
+        backup_id = uuid.uuid4()
+        storage_key = f"{backup_id}.dump"
+        backup = Backup(id=backup_id,
+                        filename=file.filename,
+                        size=file.size,
+                        storage_key=storage_key,
+                        postgres_version=postgres_version)
+        try:
+            await save_file(file, storage_key)
+            await self.repository.upload_file(backup)
+            await self.repository.commit()
+        except SQLAlchemyError:
+            try:
+                await self.repository.rollback()
+            finally:
+                await delete_file(storage_key)
+            raise
+        return BackupResponse.model_validate(backup)
+
+    async def get_backups(self) -> list[BackupResponse]:
+        backups = await self.repository.get_backups()
+        return [BackupResponse.model_validate(backup) for backup in backups]
+
+    async def get_backup(self, backup_id: uuid.UUID) -> BackupResponse:
+        backup = await self.repository.get_backup(backup_id)
+        if backup is None:
+            raise HTTPException(status_code=404, detail="Backup not found")
+        return BackupResponse.model_validate(backup)
