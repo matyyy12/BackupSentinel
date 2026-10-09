@@ -3,10 +3,10 @@ import uuid
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.models import Backup
-from app.repository import BackupRepository
-from app.schemas import BackupResponse
-from app.storage import save_file, delete_file
+from backup_app.models import Backup
+from backup_app.repository import BackupRepository
+from backup_app.schemas import BackupResponse
+from backup_app.storage import save_file, delete_file
 
 
 class BackupService:

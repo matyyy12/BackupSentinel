@@ -4,9 +4,9 @@ from typing import Annotated
 from fastapi import APIRouter, File, UploadFile, Depends, Form
 from starlette import status
 
-from app.dependencies import get_service
-from app.schemas import BackupResponse
-from app.service import BackupService
+from backup_app.dependencies import get_service
+from backup_app.schemas import BackupResponse
+from backup_app.service import BackupService
 
 
 router = APIRouter(prefix="/backup", tags=["backup"])

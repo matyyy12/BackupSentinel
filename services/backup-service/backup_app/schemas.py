@@ -2,7 +2,7 @@ import datetime
 import uuid
 
 from pydantic import BaseModel, ConfigDict
-from app.models import Status
+from backup_app.models import Status
 
 class BackupResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

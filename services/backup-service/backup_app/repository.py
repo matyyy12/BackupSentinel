@@ -4,8 +4,8 @@ from fastapi import UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Backup
-from app.schemas import BackupResponse
+from backup_app.models import Backup
+from backup_app.schemas import BackupResponse
 
 
 class BackupRepository:

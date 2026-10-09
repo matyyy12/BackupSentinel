@@ -1,7 +1,7 @@
 import asyncio
 import os
 
-from app.models import Base
+from backup_app.models import Base
 from logging.config import fileConfig
 
 from sqlalchemy import pool
