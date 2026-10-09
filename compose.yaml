@@ -1,0 +1,49 @@
+name: backupsentinel
+
+services:
+  backup-db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: backup
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+      POSTGRES_DB: backups
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U backup -d backups"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backup-service:
+    build: ./services/backup-service
+    environment:
+      DATABASE_URL: postgresql+asyncpg://backup:${POSTGRES_PASSWORD:-local-development-only}@backup-db:5432/backups
+      BACKUP_STORAGE_PATH: /data/backups
+    volumes:
+      - backup_files:/data/backups
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      backup-db:
+        condition: service_healthy
+
+  verification-service:
+    build: ./services/verification-service
+    volumes:
+      - backup_files:/data/backups:ro
+    environment:
+      BACKUP_STORAGE_PATH: /data/backups
+    ports:
+      - "127.0.0.1:8001:8000"
+    depends_on:
+      - backup-service
+
+  monitoring-service:
+    build: ./services/monitoring-service
+    ports:
+      - "127.0.0.1:8002:8000"
+
+volumes:
+  backup_files:
+  postgres_data:
