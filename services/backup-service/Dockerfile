@@ -22,12 +22,16 @@ ENV PYTHONUNBUFFERED=1 \
 RUN groupadd --gid 10001 app \
     && useradd --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
 
+RUN mkdir -p /data/backups && chown app:app /data/backups
+
 WORKDIR /service
 
 COPY --from=builder /service/.venv /service/.venv
 COPY app ./app
+COPY main.py database.py alembic.ini ./
+COPY migrations ./migrations
 
 USER app
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
