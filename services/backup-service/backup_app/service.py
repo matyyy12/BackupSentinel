@@ -5,15 +5,16 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.concurrency import run_in_threadpool
 
 from backup_app.celery_app import app
-from backup_app.models import Backup, Status
-from backup_app.repository import BackupRepository
-from backup_app.schemas import BackupResponse
+from backup_app.models import Backup, BackupResult
+from backup_app.repository import BackupRepository, BackupResultRepository
+from backup_app.schemas import BackupResponse, VerificationResult
 from backup_app.storage import save_file, delete_file
 
 
 class BackupService:
-    def __init__(self, repository: BackupRepository):
+    def __init__(self, repository: BackupRepository, results_repository: BackupResultRepository):
         self.repository: BackupRepository = repository
+        self.results_repository: BackupResultRepository = results_repository
 
     async def upload_file(self, file: UploadFile, postgres_version: str) -> BackupResponse:
         backup_id = uuid.uuid4()
@@ -52,10 +53,27 @@ class BackupService:
             raise HTTPException(status_code=404, detail="Backup not found")
         return BackupResponse.model_validate(backup)
 
-    async def update_backup_status(self, backup_id: uuid.UUID, status: Status) -> BackupResponse:
-        backup = await self.repository.get_backup_for_update(backup_id)
+    async def save_backup_status(self, request: VerificationResult) -> BackupResponse:
+        backup = await self.repository.get_backup_for_update(request.backup_id)
         if backup is None:
             raise ValueError("Backup not found")
-        backup.status = status
-        await self.repository.commit()
+        backup.status = request.status
+        result = BackupResult(status=request.status,
+                              backup=backup,
+                              started_at=request.started_at,
+                              finished_at=request.finished_at,
+                              error_message=request.error_message,
+                              )
+        try:
+            await self.results_repository.add_result(result)
+            await self.results_repository.commit()
+        except SQLAlchemyError:
+            await self.results_repository.rollback()
+            raise
         return BackupResponse.model_validate(backup)
+
+    async def get_backup_status(self, backup_id: uuid.UUID) -> VerificationResult:
+        result = await self.results_repository.get_result(backup_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Result not found")
+        return VerificationResult.model_validate(result)
