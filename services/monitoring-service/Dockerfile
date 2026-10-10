@@ -25,9 +25,10 @@ RUN groupadd --gid 10001 app \
 WORKDIR /service
 
 COPY --from=builder /service/.venv /service/.venv
-COPY app ./app
+COPY monitoring_app ./monitoring_app
+COPY main.py ./
 
 USER app
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

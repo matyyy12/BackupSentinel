@@ -6,7 +6,7 @@ Uruchomienie z katalogu tego serwisu:
 
 ```sh
 uv sync --locked
-uv run uvicorn app.main:app --reload
+uv run uvicorn main:app --reload
 ```
 
 Dokumentacja API: http://localhost:8000/docs
