@@ -13,3 +13,12 @@ class BackupResponse(BaseModel):
     status: Status
     upload_date: datetime.datetime
     postgres_version: str
+
+class VerificationResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    backup_id: uuid.UUID
+    status: Status
+    started_at: datetime.datetime
+    finished_at: datetime.datetime
+    error_message: str | None

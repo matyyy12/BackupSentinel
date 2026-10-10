@@ -23,6 +23,9 @@ class BackupRepository:
     async def get_backup(self, backup_id: uuid.UUID) -> Backup | None:
         return await self.session.scalar(select(Backup).where(Backup.id == backup_id))
 
+    async def get_backup_for_update(self, backup_id: uuid.UUID) -> Backup | None:
+        return await self.session.scalar(select(Backup).where(Backup.id == backup_id).with_for_update())
+
     async def commit(self) -> None:
         await self.session.commit()
 
