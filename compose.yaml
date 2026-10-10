@@ -28,11 +28,26 @@ services:
       backup-db:
         condition: service_healthy
 
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+
   verification-service:
     build: ./services/verification-service
     volumes:
       - backup_files:/data/backups:ro
     environment:
+      BACKUP_VOLUME_NAME: backupsentinel_backup_files
       BACKUP_STORAGE_PATH: /data/backups
     ports:
       - "127.0.0.1:8001:8000"
@@ -47,3 +62,4 @@ services:
 volumes:
   backup_files:
   postgres_data:
+  redis_data:
