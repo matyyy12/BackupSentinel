@@ -17,6 +17,7 @@ class BackupResponse(BaseModel):
 class VerificationResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    verification_id: uuid.UUID
     backup_id: uuid.UUID
     status: Status
     started_at: datetime.datetime

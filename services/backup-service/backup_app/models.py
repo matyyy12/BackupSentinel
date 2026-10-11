@@ -30,6 +30,8 @@ class Backup(Base):
 class BackupResult(Base):
     __tablename__ = "backup_results"
     id: Mapped[int] = mapped_column(primary_key=True, nullable=False)
+
+    verification_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, unique=True)
     backup_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("backups.id", ondelete="CASCADE"), index=True, nullable=False)
     status: Mapped[Status] = mapped_column(SqlEnum(Status), nullable=False, default=Status.RECEIVED)
     started_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
