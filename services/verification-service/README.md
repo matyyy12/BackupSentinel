@@ -33,4 +33,15 @@ Opcjonalny plik `compose.verification-local.yaml` udostępnia tej usłudze socke
 
 Proces API działa jako użytkownik app z dodatkową grupą `DOCKER_GID` (domyślnie 0 dla Docker Desktop). Na Linuksie ustaw w `.env` GID grupy socketa, odczytany przez `stat -c %g /var/run/docker.sock`. Nie zmieniaj socketa na publicznie zapisywalny.
 
-Wolumen jest wybierany przez `BACKUP_VOLUME_NAME`. Obraz `postgres:17-bookworm` musi być dostępny na hoście Dockera; pobiera go również usługa backup-db. Funkcja restore usuwa swoje kontenery po zakończeniu testu. Status VERIFIED oznacza poprawne odtworzenie bez właścicieli i uprawnień, nie sprawdzenie kompletności danych biznesowych. Wynik nie aktualizuje jeszcze statusu w backup-service.
+Wolumen jest wybierany przez `BACKUP_VOLUME_NAME`. Obraz `postgres:17-bookworm` musi być dostępny na hoście Dockera; pobiera go również usługa backup-db. Funkcja restore usuwa swoje kontenery po zakończeniu testu. Status VERIFIED oznacza poprawne odtworzenie bez właścicieli i uprawnień, nie sprawdzenie kompletności danych biznesowych. Endpoint HTTP zwraca wynik bez zapisu w backup-service. Zadanie Celery wysyła wynik do kolejki `backup`, a backup-worker zapisuje status i szczegóły w bazie.
+
+
+## Worker Celery
+
+Po zastosowaniu migracji backup-service uruchom z głównego katalogu:
+
+```sh
+docker compose -f compose.yaml -f compose.verification-local.yaml up --build -d backup-service backup-worker verification-worker
+```
+
+Worker `verification-worker` słucha kolejki `verification`. Dodatkowy plik lokalny podłącza socket Dockera również do workera, z grupą `DOCKER_GID`. API weryfikacji nie musi działać, żeby zadania Celery były wykonywane.

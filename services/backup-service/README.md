@@ -50,3 +50,21 @@ docker compose run --rm -v "$(pwd)/services/backup-service/migrations:/service/m
 ```
 
 Powyższe polecenie wykonuj z głównego katalogu repozytorium po przebudowaniu obrazu z aktualnymi modelami. Cofnięcie pierwszej migracji usuwa tabelę backupów i jej dane.
+
+## API i workery Celery
+
+Po zastosowaniu migracji, z głównego katalogu uruchom pełny przepływ:
+
+```sh
+docker compose -f compose.yaml -f compose.verification-local.yaml up --build -d backup-service backup-worker verification-worker
+```
+
+Compose uruchomi również PostgreSQL i Redis. `backup-worker` słucha kolejki `backup`, a `verification-worker` kolejki `verification`. Workery używają tych samych obrazów co API, ale uruchamiają Celery zamiast Uvicorna i nie publikują portów. Nie uruchamiaj równolegle starszych, ręcznie uruchomionych workerów tych kolejek.
+
+Lokalny plik dodatkowy zapewnia workerowi weryfikacji dostęp do Dockera potrzebny do odtwarzania. Bez niego worker może połączyć się z Redis, ale nie wykona odtworzenia.
+
+```sh
+docker compose logs -f backup-worker verification-worker
+```
+
+Upload: `POST /api/backups/files`. Ostatni wynik: `GET /api/backups/status/{backup_id}`.

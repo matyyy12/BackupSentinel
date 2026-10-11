@@ -16,6 +16,7 @@ services:
       retries: 10
 
   backup-service:
+    image: backupsentinel-backup-service
     build: ./services/backup-service
     environment:
       DATABASE_URL: postgresql+asyncpg://backup:${POSTGRES_PASSWORD:-local-development-only}@backup-db:5432/backups
@@ -26,6 +27,34 @@ services:
       - "127.0.0.1:8000:8000"
     depends_on:
       backup-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  backup-worker:
+    image: backupsentinel-backup-service
+    build: ./services/backup-service
+    command: ["celery", "-A", "backup_app.celery_app:app", "worker", "-Q", "backup", "--loglevel=info", "--concurrency=1"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://backup:${POSTGRES_PASSWORD:-local-development-only}@backup-db:5432/backups
+    depends_on:
+      backup-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  verification-worker:
+    image: backupsentinel-verification-service
+    build: ./services/verification-service
+    command: ["celery", "-A", "verification_app.celery_app:app", "worker", "-Q", "verification", "--loglevel=info", "--concurrency=1"]
+    environment:
+      BACKUP_VOLUME_NAME: backupsentinel_backup_files
+    volumes:
+      - backup_files:/data/backups:ro
+    depends_on:
+      backup-db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   redis:
@@ -43,6 +72,7 @@ services:
 
 
   verification-service:
+    image: backupsentinel-verification-service
     build: ./services/verification-service
     volumes:
       - backup_files:/data/backups:ro
