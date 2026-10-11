@@ -1,6 +1,7 @@
 import uuid
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backup_app.models import Backup, BackupResult
@@ -34,9 +35,23 @@ class BackupResultRepository:
     def __init__(self, session: AsyncSession):
         self.session: AsyncSession = session
 
-    async def add_result(self, result: BackupResult) -> None:
-        self.session.add(result)
-        await self.session.flush()
+    async def add_result(self, result: BackupResult) -> bool:
+        statement = (insert(BackupResult)
+                     .values(
+                            verification_id=result.verification_id,
+                            backup_id=result.backup_id,
+                            status=result.status,
+                            started_at=result.started_at,
+                            finished_at=result.finished_at,
+                            error_message=result.error_message,
+                    )
+                    .on_conflict_do_nothing(
+                            index_elements=[BackupResult.verification_id]
+                    )
+                    .returning(BackupResult.id)
+        )
+        result_id = await self.session.scalar(statement)
+        return result_id is not None
 
     async def get_result(self, backup_id: uuid.UUID) -> BackupResult | None:
         return await self.session.scalar(select(BackupResult)

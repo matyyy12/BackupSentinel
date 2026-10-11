@@ -10,10 +10,10 @@ from backup_app.service import BackupService
 
 
 @app.task(name="backup_results")
-def backup_results(request) -> None:
-        asyncio.run(save_verification_result(request))
+def backup_results(request: VerificationResult) -> None:
+    asyncio.run(save_verification_result(request))
 
-async def save_verification_result(request):
+async def save_verification_result(request: VerificationResult) -> None:
     engine = create_async_engine(os.environ["DATABASE_URL"])
     Session = async_sessionmaker(engine, expire_on_commit=False)
     try:

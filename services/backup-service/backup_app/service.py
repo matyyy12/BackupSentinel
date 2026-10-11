@@ -37,7 +37,8 @@ class BackupService:
         await run_in_threadpool(
             app.send_task,
             "verification_restore",
-            kwargs={"backup_id": str(backup_id),
+            kwargs={"verification_id": str(uuid.uuid4()),
+                    "backup_id": str(backup_id),
                     "storage_key": storage_key,
                     "postgres_version": postgres_version},
         )
@@ -57,15 +58,17 @@ class BackupService:
         backup = await self.repository.get_backup_for_update(request.backup_id)
         if backup is None:
             raise ValueError("Backup not found")
-        backup.status = request.status
-        result = BackupResult(status=request.status,
-                              backup=backup,
+        result = BackupResult(verification_id=request.verification_id,
+                              status=request.status,
+                              backup_id=backup.id,
                               started_at=request.started_at,
                               finished_at=request.finished_at,
                               error_message=request.error_message,
                               )
         try:
-            await self.results_repository.add_result(result)
+            inserted = await self.results_repository.add_result(result)
+            if inserted:
+                backup.status=request.status
             await self.results_repository.commit()
         except SQLAlchemyError:
             await self.results_repository.rollback()
