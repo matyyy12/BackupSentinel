@@ -31,6 +31,16 @@ services:
       redis:
         condition: service_healthy
 
+  outbox-publisher:
+    image: backupsentinel-backup-service
+    build: ./services/backup-service
+    command: ["python", "-m", "backup_app.publisher"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://backup:${POSTGRES_PASSWORD:-local-development-only}@backup-db:5432/backups
+    depends_on:
+      backup-db:
+        condition: service_healthy
+
   backup-worker:
     image: backupsentinel-backup-service
     build: ./services/backup-service
