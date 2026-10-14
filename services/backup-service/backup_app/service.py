@@ -5,16 +5,19 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.concurrency import run_in_threadpool
 
 from backup_app.celery_app import app
-from backup_app.models import Backup, BackupResult
-from backup_app.repository import BackupRepository, BackupResultRepository
+from backup_app.models import Backup, BackupResult, Outbox
+from backup_app.repository import BackupRepository, BackupResultRepository, OutboxRepository
 from backup_app.schemas import BackupResponse, VerificationResult
 from backup_app.storage import save_file, delete_file
 
 
 class BackupService:
-    def __init__(self, repository: BackupRepository, results_repository: BackupResultRepository):
+    def __init__(self, repository: BackupRepository,
+                 results_repository: BackupResultRepository,
+                 outbox_repository: OutboxRepository):
         self.repository: BackupRepository = repository
         self.results_repository: BackupResultRepository = results_repository
+        self.outbox_repository: OutboxRepository = outbox_repository
 
     async def upload_file(self, file: UploadFile, postgres_version: str) -> BackupResponse:
         backup_id = uuid.uuid4()
@@ -24,9 +27,18 @@ class BackupService:
                         size=file.size,
                         storage_key=storage_key,
                         postgres_version=postgres_version)
+        outbox = Outbox(backup_id=backup_id,
+                        task_name="verification_restore",
+                        payload={
+                            "verification_id": str(uuid.uuid4()),
+                            "backup_id": str(backup_id),
+                            "storage_key": storage_key,
+                            "postgres_version": postgres_version,
+                        })
         try:
             await save_file(file, storage_key)
             await self.repository.upload_file(backup)
+            await self.outbox_repository.add_outbox(outbox)
             await self.repository.commit()
         except SQLAlchemyError:
             try:
@@ -34,14 +46,6 @@ class BackupService:
             finally:
                 await delete_file(storage_key)
             raise
-        await run_in_threadpool(
-            app.send_task,
-            "verification_restore",
-            kwargs={"verification_id": str(uuid.uuid4()),
-                    "backup_id": str(backup_id),
-                    "storage_key": storage_key,
-                    "postgres_version": postgres_version},
-        )
         return BackupResponse.model_validate(backup)
 
     async def get_backups(self) -> list[BackupResponse]:
