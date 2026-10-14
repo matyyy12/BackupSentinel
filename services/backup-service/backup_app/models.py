@@ -1,7 +1,10 @@
 import datetime
+import json as JSON
 import uuid
 from enum import Enum
-from sqlalchemy import UUID, String, DateTime, func, BigInteger, Enum as SqlEnum, ForeignKey
+from typing import Any
+
+from sqlalchemy import UUID, String, DateTime, func, BigInteger, Enum as SqlEnum, ForeignKey, JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -39,3 +42,12 @@ class BackupResult(Base):
     error_message: Mapped[str | None] = mapped_column(String, nullable=True)
 
     backup: Mapped["Backup"] = relationship(back_populates="results")
+
+class Outbox(Base):
+    __tablename__ = "outbox"
+
+    id: Mapped[int] = mapped_column(primary_key=True, nullable=False)
+    backup_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("backups.id", ondelete="CASCADE"), index=True, nullable=False)
+    task_name: Mapped[str] = mapped_column(String, nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    sent_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
