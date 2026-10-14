@@ -5,6 +5,12 @@ from datetime import datetime, timezone
 from pathlib import PurePosixPath
 
 import docker
+from docker.errors import DockerException
+from requests.exceptions import ConnectionError, Timeout
+
+
+class DockerUnavailableError(Exception):
+    ...
 
 
 def restore(storage_key: str, *, ready_timeout: float = 60) -> dict:
@@ -21,7 +27,12 @@ def restore(storage_key: str, *, ready_timeout: float = 60) -> dict:
 
     volume = os.environ.get("BACKUP_VOLUME_NAME", "backupsentinel_backup_files")
     started_at = datetime.now(timezone.utc)
-    client = docker.from_env(timeout=300)
+    try:
+        client = docker.from_env(timeout=300)
+    except DockerException as exc:
+        if isinstance(exc.__cause__, (ConnectionError, Timeout)):
+            raise DockerUnavailableError(str(exc)) from exc
+        raise
     container = None
     try:
         client.volumes.get(volume)
