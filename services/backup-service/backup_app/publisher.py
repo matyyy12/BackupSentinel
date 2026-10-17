@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from starlette.concurrency import run_in_threadpool
 
 from backup_app.celery_app import app
-from backup_app.repository import OutboxRepository, BackupRepository
+from backup_app.repository import OutboxRepository
 
 
 logger = logging.getLogger(__name__)

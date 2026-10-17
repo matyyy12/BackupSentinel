@@ -1,5 +1,4 @@
 import datetime
-import json as JSON
 import uuid
 from enum import Enum
 from typing import Any
