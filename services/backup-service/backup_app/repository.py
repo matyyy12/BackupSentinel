@@ -59,6 +59,10 @@ class BackupResultRepository:
                                          .order_by(BackupResult.finished_at.desc(), BackupResult.id.desc())
                                          .limit(1))
 
+    async def get_results(self) -> list[BackupResult]:
+        result = await self.session.scalars(select(BackupResult))
+        return list(result.all())
+
     async def commit(self) -> None:
         await self.session.commit()
 

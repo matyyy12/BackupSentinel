@@ -84,3 +84,7 @@ class BackupService:
         if result is None:
             raise HTTPException(status_code=404, detail="Result not found")
         return VerificationResult.model_validate(result)
+
+    async def get_results(self) -> list[VerificationResult]:
+        statuses = await self.results_repository.get_results()
+        return [VerificationResult.model_validate(status) for status in statuses]

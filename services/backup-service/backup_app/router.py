@@ -22,6 +22,12 @@ async def post(file: Annotated[UploadFile, File()],
 async def get_backups(service: Annotated[BackupService, Depends(get_service)]) -> list[BackupResponse]:
     return await service.get_backups()
 
+
+@router.get('/results', response_model=list[VerificationResult], status_code=status.HTTP_200_OK)
+async def get_results(service: Annotated[BackupService, Depends(get_service)]) -> list[VerificationResult]:
+    return await service.get_results()
+
+
 @router.get('/{backup_id}', response_model=BackupResponse, status_code=status.HTTP_200_OK)
 async def get_backup(backup_id: uuid.UUID,
                      service: Annotated[BackupService, Depends(get_service)]) -> BackupResponse:
