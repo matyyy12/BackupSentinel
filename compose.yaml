@@ -94,12 +94,58 @@ services:
     depends_on:
       - backup-service
 
+  monitoring-db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: monitoring
+      POSTGRES_PASSWORD: ${MONITORING_POSTGRES_PASSWORD:-local-monitoring-only}
+      POSTGRES_DB: monitoring
+    volumes:
+      - monitoring_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monitoring -d monitoring"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   monitoring-service:
+    image: backupsentinel-monitoring-service
     build: ./services/monitoring-service
+    environment:
+      DATABASE_URL: postgresql+asyncpg://monitoring:${MONITORING_POSTGRES_PASSWORD:-local-monitoring-only}@monitoring-db:5432/monitoring
     ports:
       - "127.0.0.1:8002:8000"
+    depends_on:
+      monitoring-db:
+        condition: service_healthy
+
+  monitoring-worker:
+    image: backupsentinel-monitoring-service
+    build: ./services/monitoring-service
+    command: ["celery", "-A", "monitoring_app.celery_app:app", "worker", "-Q", "monitoring", "--loglevel=info", "--concurrency=1"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://monitoring:${MONITORING_POSTGRES_PASSWORD:-local-monitoring-only}@monitoring-db:5432/monitoring
+    depends_on:
+      monitoring-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backup-service:
+        condition: service_started
+
+  monitoring-beat:
+    image: backupsentinel-monitoring-service
+    build: ./services/monitoring-service
+    command: ["celery", "-A", "monitoring_app.celery_app:app", "beat", "--loglevel=info", "--schedule=/data/celerybeat-schedule"]
+    volumes:
+      - monitoring_beat_data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
 
 volumes:
   backup_files:
   postgres_data:
   redis_data:
+  monitoring_data:
+  monitoring_beat_data:

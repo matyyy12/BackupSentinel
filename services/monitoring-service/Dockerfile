@@ -25,8 +25,11 @@ RUN groupadd --gid 10001 app \
 WORKDIR /service
 
 COPY --from=builder /service/.venv /service/.venv
+RUN mkdir -p /data && chown app:app /data
 COPY monitoring_app ./monitoring_app
 COPY main.py ./
+COPY alembic.ini ./
+COPY migrations ./migrations
 
 USER app
 EXPOSE 8000
