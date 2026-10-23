@@ -27,6 +27,8 @@ WORKDIR /service
 COPY --from=builder /service/.venv /service/.venv
 COPY verification_app ./verification_app
 COPY main.py ./
+COPY alembic.ini ./
+COPY migrations ./migrations
 
 USER app
 EXPOSE 8000

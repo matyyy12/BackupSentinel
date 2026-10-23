@@ -53,18 +53,45 @@ services:
       redis:
         condition: service_healthy
 
+  verification-db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: verification
+      POSTGRES_PASSWORD: ${VERIFICATION_POSTGRES_PASSWORD:-local-verification-only}
+      POSTGRES_DB: verification
+    volumes:
+      - verification_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verification -d verification"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   verification-worker:
     image: backupsentinel-verification-service
     build: ./services/verification-service
     command: ["celery", "-A", "verification_app.celery_app:app", "worker", "-Q", "verification", "--loglevel=info", "--concurrency=1"]
     environment:
       BACKUP_VOLUME_NAME: backupsentinel_backup_files
+      DATABASE_URL: postgresql+asyncpg://verification:${VERIFICATION_POSTGRES_PASSWORD:-local-verification-only}@verification-db:5432/verification
     volumes:
       - backup_files:/data/backups:ro
     depends_on:
       backup-db:
         condition: service_healthy
+      verification-db:
+        condition: service_healthy
       redis:
+        condition: service_healthy
+
+  verification-result-publisher:
+    image: backupsentinel-verification-service
+    build: ./services/verification-service
+    command: ["python", "-m", "verification_app.publisher"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://verification:${VERIFICATION_POSTGRES_PASSWORD:-local-verification-only}@verification-db:5432/verification
+    depends_on:
+      verification-db:
         condition: service_healthy
 
   redis:
@@ -89,10 +116,14 @@ services:
     environment:
       BACKUP_VOLUME_NAME: backupsentinel_backup_files
       BACKUP_STORAGE_PATH: /data/backups
+      DATABASE_URL: postgresql+asyncpg://verification:${VERIFICATION_POSTGRES_PASSWORD:-local-verification-only}@verification-db:5432/verification
     ports:
       - "127.0.0.1:8001:8000"
     depends_on:
-      - backup-service
+      backup-service:
+        condition: service_started
+      verification-db:
+        condition: service_healthy
 
   monitoring-db:
     image: postgres:17-bookworm
@@ -149,3 +180,4 @@ volumes:
   redis_data:
   monitoring_data:
   monitoring_beat_data:
+  verification_data:

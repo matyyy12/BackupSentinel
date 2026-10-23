@@ -45,3 +45,27 @@ docker compose -f compose.yaml -f compose.verification-local.yaml up --build -d 
 ```
 
 Worker `verification-worker` słucha kolejki `verification`. Dodatkowy plik lokalny podłącza socket Dockera również do workera, z grupą `DOCKER_GID`. API weryfikacji nie musi działać, żeby zadania Celery były wykonywane.
+
+## Osobna baza i migracje wyników
+
+`verification-db` to PostgreSQL z własną bazą i użytkownikiem `verification`, bez kluczy obcych do baz innych serwisów. Dane przechowuje wolumen `verification_data`. Hasło ustawia `VERIFICATION_POSTGRES_PASSWORD`; wartość domyślna służy lokalnemu developmentowi. Compose przekazuje `DATABASE_URL` do API i workera.
+
+Z głównego katalogu projektu lub katalogu verification-service:
+
+```sh
+docker compose build verification-service
+docker compose up -d --wait verification-db
+docker compose run --rm --no-deps verification-service alembic upgrade head
+docker compose run --rm --no-deps verification-service alembic current
+docker compose run --rm --no-deps verification-service alembic check
+```
+
+Migracja `0001` tworzy `verification_result_outbox`, klucz główny `verification_id` i indeks `backup_id`. `created_at` ustawia baza, a `sent_at` pozostaje NULL do wysłania. Cofnięcie migracji usuwa tabelę i zapisane wyniki. Migracje wykonuj przed startem nowej wersji aplikacji; nie uruchamiają się automatycznie.
+
+Task sprawdza outbox po `verification_id` przed odtworzeniem. Jeżeli wynik już istnieje, nie wykonuje odtwarzania ponownie. Nowy wynik zapisuje w PostgreSQL; publisher wysyła go jako `backup_results` i ustawia `sent_at` po udanym wysłaniu. Błąd wysyłania cofa transakcję i pozostawia wynik do kolejnej próby.
+
+```sh
+docker compose -f compose.yaml -f compose.verification-local.yaml up --build -d verification-worker verification-result-publisher
+```
+
+Publisher potrzebuje bazy, ale nie wymaga gotowości Redis przy starcie ani dostępu do socketa Dockera. Awaria po wysłaniu, a przed commitem może spowodować powtórzenie wiadomości; backup-service pomija duplikaty według `verification_id`. Wywołania samego odtwarzania nie mają gwarancji pojedynczego wykonania: równoległe zadania lub awaria przed zapisaniem wyniku mogą powtórzyć odtworzenie. Brak dostępności PostgreSQL nadal kończy task błędem — zapis wyniku musi się udać, żeby uznać zadanie za zakończone.
