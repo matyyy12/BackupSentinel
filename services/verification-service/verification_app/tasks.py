@@ -1,8 +1,10 @@
+import asyncio
 import datetime
 import uuid
 
 from verification_app.celery_app import app
 from verification_app.restore import DockerUnavailableError, restore
+from verification_app.outbox import get_saved_result, save_result
 from verification_app.schemas import VerificationRequest, VerificationResponse, Status
 from requests.exceptions import ConnectionError, Timeout
 
@@ -19,6 +21,11 @@ def verification_restore(self,
         "storage_key": storage_key,
         "postgres_version": postgres_version
     })
+    saved = asyncio.run(get_saved_result(request.verification_id))
+    if saved is not None:
+        if saved.backup_id != request.backup_id:
+            raise ValueError("verification_id already belongs to a different backup")
+        return
     started_at = datetime.datetime.now(datetime.timezone.utc)
     try:
         result = restore(request.storage_key)
@@ -34,8 +41,5 @@ def verification_restore(self,
     result["backup_id"] = request.backup_id
     result['verification_id'] = request.verification_id
     result = VerificationResponse.model_validate(result)
-    app.send_task(
-        "backup_results",
-        kwargs={"request": result.model_dump(mode="json")},
-    )
+    asyncio.run(save_result(result))
     return

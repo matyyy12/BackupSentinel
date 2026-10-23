@@ -15,7 +15,7 @@ class Status(Enum):
 class VerificationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    verification_id: str
+    verification_id: uuid.UUID
     backup_id: uuid.UUID
     storage_key: str
     postgres_version: Literal["17"]
