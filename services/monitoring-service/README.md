@@ -64,3 +64,10 @@ docker compose logs -f monitoring-worker monitoring-beat
 ```
 
 Uruchamiaj tylko jedną instancję Beat dla tego harmonogramu. Migracje bazy pozostają osobnym krokiem przed uruchomieniem workera.
+
+
+## Obsługa błędów HTTP
+
+Globalne handlery są rejestrowane w `main.py`. Oczekiwane błędy aplikacji (`ApplicationError`, np. `NotFoundError`) zwracają JSON `{"detail": "..."}` z przypisanym statusem. Błędy operacyjne SQLAlchemy zwracają 503; nieoczekiwane wyjątki dają ogólne 500, ze szczegółami wyłącznie w logach. Domyślne odpowiedzi FastAPI dla `HTTPException` i walidacji 422 zostają zachowane.
+
+W handlerze zwracamy odpowiedź HTTP, zamiast zgłaszać kolejny `HTTPException`. Handlery dotyczą wyłącznie żądań API, nie zmieniają wyjątków ani retry tasków Celery. Błędy pojawiające się już po rozpoczęciu przesyłania odpowiedzi (np. usunięcie pobieranego pliku w trakcie transferu) nie mogą zmienić wysłanego statusu HTTP.
