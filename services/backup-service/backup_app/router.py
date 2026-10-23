@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, UploadFile, Depends, Form
 from starlette import status
+from starlette.responses import FileResponse
 
 from backup_app.dependencies import get_service
 from backup_app.schemas import BackupResponse, VerificationResult
@@ -27,6 +28,10 @@ async def get_backups(service: Annotated[BackupService, Depends(get_service)]) -
 async def get_results(service: Annotated[BackupService, Depends(get_service)]) -> list[VerificationResult]:
     return await service.get_results()
 
+@router.get('/{backup_id}/download', response_class=FileResponse, status_code=status.HTTP_200_OK)
+async def download_backup(backup_id: uuid.UUID,
+                          service: Annotated[BackupService, Depends(get_service)]) -> FileResponse:
+    return await service.download_backup(backup_id)
 
 @router.get('/{backup_id}', response_model=BackupResponse, status_code=status.HTTP_200_OK)
 async def get_backup(backup_id: uuid.UUID,

@@ -1,14 +1,14 @@
 import uuid
 
-from fastapi import UploadFile, HTTPException
+from fastapi import UploadFile
 from sqlalchemy.exc import SQLAlchemyError
-from starlette.concurrency import run_in_threadpool
+from starlette.responses import FileResponse
 
-from backup_app.celery_app import app
+from backup_app.exceptions import NotFoundError
 from backup_app.models import Backup, BackupResult, Outbox
 from backup_app.repository import BackupRepository, BackupResultRepository, OutboxRepository
 from backup_app.schemas import BackupResponse, VerificationResult
-from backup_app.storage import save_file, delete_file
+from backup_app.storage import save_file, delete_file, download_file
 
 
 class BackupService:
@@ -48,6 +48,13 @@ class BackupService:
             raise
         return BackupResponse.model_validate(backup)
 
+    async def download_backup(self, backup_id: uuid.UUID) -> FileResponse:
+        backup = await self.repository.get_backup(backup_id)
+        if backup is None:
+            raise NotFoundError("Backup not found")
+        file_response = await download_file(backup.storage_key, backup.filename)
+        return file_response
+
     async def get_backups(self) -> list[BackupResponse]:
         backups = await self.repository.get_backups()
         return [BackupResponse.model_validate(backup) for backup in backups]
@@ -55,13 +62,13 @@ class BackupService:
     async def get_backup(self, backup_id: uuid.UUID) -> BackupResponse:
         backup = await self.repository.get_backup(backup_id)
         if backup is None:
-            raise HTTPException(status_code=404, detail="Backup not found")
+            raise NotFoundError("Backup not found")
         return BackupResponse.model_validate(backup)
 
     async def save_backup_status(self, request: VerificationResult) -> BackupResponse:
         backup = await self.repository.get_backup_for_update(request.backup_id)
         if backup is None:
-            raise ValueError("Backup not found")
+            raise NotFoundError("Backup not found")
         result = BackupResult(verification_id=request.verification_id,
                               status=request.status,
                               backup_id=backup.id,
@@ -82,7 +89,7 @@ class BackupService:
     async def get_backup_status(self, backup_id: uuid.UUID) -> VerificationResult:
         result = await self.results_repository.get_result(backup_id)
         if result is None:
-            raise HTTPException(status_code=404, detail="Result not found")
+            raise NotFoundError("Result not found")
         return VerificationResult.model_validate(result)
 
     async def get_results(self) -> list[VerificationResult]:
