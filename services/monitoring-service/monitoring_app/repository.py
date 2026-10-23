@@ -1,4 +1,6 @@
-from sqlalchemy import text, select
+import uuid
+
+from sqlalchemy import text, select, update, func
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,6 +49,18 @@ class MonitoringRepository:
 
     async def get_alert_for_update(self, alert_id: int) -> Alert | None:
         return await self.session.scalar(select(Alert).where(Alert.id == alert_id).with_for_update())
+
+    async def resolve_timeout(self, backup_id: uuid.UUID) -> None:
+        statement = (
+            update(Alert)
+            .where(
+                Alert.backup_id == backup_id,
+                Alert.type == AlertType.VERIFICATION_TIMEOUT,
+                Alert.resolved_at.is_(None),
+            )
+            .values(resolved_at=func.now())
+        )
+        await self.session.execute(statement)
 
     async def commit(self) -> None:
         await self.session.commit()

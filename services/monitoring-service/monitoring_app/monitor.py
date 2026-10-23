@@ -45,6 +45,12 @@ async def monitor() -> None:
             results = response.json()
             for result in results:
                 if result["status"] in ("FAILED", "VERIFIED"):
+                    try:
+                        await repository.resolve_timeout(uuid.UUID(result["id"]))
+                        await repository.commit()
+                    except Exception:
+                        await repository.rollback()
+                        raise
                     continue
                 uploaded_at = datetime.datetime.fromisoformat(result["upload_date"].replace("Z", "+00:00"))
                 now = datetime.datetime.now(datetime.timezone.utc)

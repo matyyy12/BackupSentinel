@@ -4,12 +4,14 @@ import os
 import unittest
 import uuid
 from datetime import datetime, timezone
+from unittest.mock import Mock, patch
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from monitoring_app.models import Alert, AlertType
 from monitoring_app.repository import MonitoringRepository
+from monitoring_app.monitor import monitor, result_url, backup_url
 
 
 @unittest.skipUnless(os.environ.get("TEST_DATABASE_URL"), "Requires a PostgreSQL test database")
@@ -75,6 +77,49 @@ class TimeoutAlertTests(unittest.IsolatedAsyncioTestCase):
         results = await asyncio.gather(self.add(self.backup_ids[0]), self.add(self.backup_ids[0]))
         self.assertEqual(sorted(results), [False, True])
         self.assertEqual(await self.count(), 1)
+
+    async def check_terminal_resolution(self, status):
+        completed, pending = self.backup_ids
+        verification_id = uuid.uuid4()
+        await self.add(completed)
+        await self.add(pending)
+        await self.add(completed, AlertType.VERIFICATION_FAILED, verification_id)
+
+        results_response = Mock()
+        results_response.json.return_value = []
+        backups_response = Mock()
+        backups_response.json.return_value = [
+            {"id": str(completed), "status": status},
+            {"id": str(pending), "status": "RECEIVED",
+             "upload_date": "2020-01-01T00:00:00Z"},
+        ]
+
+        async def snapshot():
+            async with self.sessions() as session:
+                alerts = (await session.scalars(select(Alert).where(
+                    Alert.backup_id.in_(self.backup_ids),
+                ))).all()
+                return {(a.backup_id, a.type): a.resolved_at for a in alerts}
+
+        def get(url, **kwargs):
+            return {result_url: results_response, backup_url: backups_response}[url]
+
+        with patch.dict(os.environ, DATABASE_URL=os.environ["TEST_DATABASE_URL"]), \
+             patch("monitoring_app.monitor.requests.get", side_effect=get):
+            await monitor()
+            first = await snapshot()
+            self.assertIsNotNone(first[(completed, AlertType.VERIFICATION_TIMEOUT)])
+            self.assertIsNone(first[(completed, AlertType.VERIFICATION_FAILED)])
+            self.assertIsNone(first[(pending, AlertType.VERIFICATION_TIMEOUT)])
+            self.assertEqual(len(first), 3)
+            await monitor()
+            self.assertEqual(await snapshot(), first)
+
+    async def test_verified_backup_closes_only_its_timeout(self):
+        await self.check_terminal_resolution("VERIFIED")
+
+    async def test_failed_backup_closes_timeout_but_preserves_failure_alert(self):
+        await self.check_terminal_resolution("FAILED")
 
 
 if __name__ == "__main__":
