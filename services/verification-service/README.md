@@ -69,3 +69,10 @@ docker compose -f compose.yaml -f compose.verification-local.yaml up --build -d 
 ```
 
 Publisher potrzebuje bazy, ale nie wymaga gotowości Redis przy starcie ani dostępu do socketa Dockera. Awaria po wysłaniu, a przed commitem może spowodować powtórzenie wiadomości; backup-service pomija duplikaty według `verification_id`. Wywołania samego odtwarzania nie mają gwarancji pojedynczego wykonania: równoległe zadania lub awaria przed zapisaniem wyniku mogą powtórzyć odtworzenie. Brak dostępności PostgreSQL nadal kończy task błędem — zapis wyniku musi się udać, żeby uznać zadanie za zakończone.
+
+
+## Obsługa błędów HTTP
+
+Globalne handlery są rejestrowane w `main.py`. Oczekiwane błędy aplikacji (`ApplicationError`, np. `NotFoundError`) zwracają JSON `{"detail": "..."}` z przypisanym statusem. Błędy operacyjne SQLAlchemy zwracają 503; nieoczekiwane wyjątki dają ogólne 500, ze szczegółami wyłącznie w logach. Domyślne odpowiedzi FastAPI dla `HTTPException` i walidacji 422 zostają zachowane.
+
+W handlerze zwracamy odpowiedź HTTP, zamiast zgłaszać kolejny `HTTPException`. Handlery dotyczą wyłącznie żądań API, nie zmieniają wyjątków ani retry tasków Celery. Błędy pojawiające się już po rozpoczęciu przesyłania odpowiedzi (np. usunięcie pobieranego pliku w trakcie transferu) nie mogą zmienić wysłanego statusu HTTP.

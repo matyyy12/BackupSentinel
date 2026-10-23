@@ -7,6 +7,7 @@ from pathlib import PurePosixPath
 import docker
 from docker.errors import DockerException
 from requests.exceptions import ConnectionError, Timeout
+from verification_app.exceptions import InvalidStorageKeyError
 
 
 class DockerUnavailableError(Exception):
@@ -21,7 +22,7 @@ def restore(storage_key: str, *, ready_timeout: float = 60) -> dict:
         or "\\" in storage_key
         or "\x00" in storage_key
     ):
-        raise ValueError("storage_key must be a filename, not a path")
+        raise InvalidStorageKeyError("storage_key must be a filename, not a path")
     if ready_timeout <= 0:
         raise ValueError("ready_timeout must be positive")
 

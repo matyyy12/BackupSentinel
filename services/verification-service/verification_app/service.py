@@ -8,4 +8,5 @@ class VerificationService:
     async def verify(self, request: VerificationRequest) -> VerificationResponse:
         result = await run_in_threadpool(restore, request.storage_key)
         result["backup_id"] = request.backup_id
+        result["verification_id"] = request.verification_id
         return VerificationResponse.model_validate(result)
