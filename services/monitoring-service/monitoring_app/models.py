@@ -2,7 +2,7 @@ import datetime
 import uuid
 from enum import Enum
 
-from sqlalchemy import UUID, String, DateTime, Enum as SqlEnum, func, UniqueConstraint
+from sqlalchemy import UUID, String, DateTime, Enum as SqlEnum, func, UniqueConstraint, Index, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -22,6 +22,14 @@ class Alert(Base):
         UniqueConstraint(
             "verification_id", "type",
             name="uq_alerts_verification_type",
+        ),
+        Index(
+            "uq_alerts_open_timeout_backup",
+            "backup_id",
+            unique=True,
+            postgresql_where=text(
+                "type = 'VERIFICATION_TIMEOUT' AND resolved_at IS NULL"
+            ),
         ),
     )
 
