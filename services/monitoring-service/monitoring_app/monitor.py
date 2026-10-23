@@ -1,3 +1,4 @@
+import datetime
 import os
 import logging
 import uuid
@@ -11,7 +12,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 
 logger = logging.getLogger(__name__)
-url = "http://backup-service:8000/api/backups/results"
+result_url = "http://backup-service:8000/api/backups/results"
+backup_url = "http://backup-service:8000/api/backups/"
 
 async def monitor() -> None:
     engine = create_async_engine(os.environ["DATABASE_URL"])
@@ -19,7 +21,7 @@ async def monitor() -> None:
     try:
         async with Session() as session:
             repository = MonitoringRepository(session)
-            response = await run_in_threadpool(requests.get, url, timeout=10)
+            response = await run_in_threadpool(requests.get, result_url, timeout=10)
             response.raise_for_status()
             results = response.json()
             for result in results:
@@ -31,6 +33,29 @@ async def monitor() -> None:
                             verification_id=verification_id,
                             message=result["error_message"] or "Verification failed",
                             type=AlertType.VERIFICATION_FAILED)
+                try:
+                    await repository.add(alert)
+                    await repository.commit()
+                except Exception:
+                    await repository.rollback()
+                    raise
+
+            response = await run_in_threadpool(requests.get, backup_url, timeout=10)
+            response.raise_for_status()
+            results = response.json()
+            for result in results:
+                if result["status"] in ("FAILED", "VERIFIED"):
+                    continue
+                uploaded_at = datetime.datetime.fromisoformat(result["upload_date"].replace("Z", "+00:00"))
+                now = datetime.datetime.now(datetime.timezone.utc)
+                if now - uploaded_at <= datetime.timedelta(minutes=15):
+                    continue
+                alert = Alert(
+                    backup_id=uuid.UUID(result["id"]),
+                    verification_id=None,
+                    message="Timeout",
+                    type=AlertType.VERIFICATION_TIMEOUT
+                )
                 try:
                     await repository.add(alert)
                     await repository.commit()
