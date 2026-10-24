@@ -1,6 +1,8 @@
 import os
 import shutil
 import logging
+import uuid
+from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi import UploadFile
@@ -10,6 +12,37 @@ from starlette.responses import FileResponse
 from backup_app.exceptions import BackupFileNotFoundError
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class StagedDeletion:
+    original: Path
+    staged: Path
+
+
+def _stage_file_deletion(storage_directory: str, storage_key: str) -> StagedDeletion | None:
+    try:
+        original = _download_path(storage_directory, storage_key)
+    except BackupFileNotFoundError:
+        return None
+    staged = original.with_name(f".deleting-{uuid.uuid4().hex}-{original.name}")
+    original.rename(staged)
+    return StagedDeletion(original=original, staged=staged)
+
+
+async def stage_file_deletion(storage_key: str) -> StagedDeletion | None:
+    directory = os.environ.get("BACKUP_STORAGE_PATH")
+    if not directory or not directory.strip():
+        raise RuntimeError("BACKUP_STORAGE_PATH must specify the backup directory")
+    return await run_in_threadpool(_stage_file_deletion, directory, storage_key)
+
+
+async def restore_staged_file(deletion: StagedDeletion) -> None:
+    await run_in_threadpool(deletion.staged.rename, deletion.original)
+
+
+async def remove_staged_file(deletion: StagedDeletion) -> None:
+    await run_in_threadpool(deletion.staged.unlink, missing_ok=True)
 
 
 def _download_path(storage_directory: str, storage_key: str) -> Path:
