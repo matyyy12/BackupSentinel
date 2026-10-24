@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import text, select, update, func
+from sqlalchemy import select, update, func, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,12 +20,8 @@ class MonitoringRepository:
             resolved_at=alert.resolved_at,
         ))
         if alert.type == AlertType.VERIFICATION_TIMEOUT:
-            statement = statement.on_conflict_do_nothing(
-                index_elements=[Alert.backup_id],
-                index_where=text(
-                    "type = 'VERIFICATION_TIMEOUT' AND resolved_at IS NULL"
-                ),
-            )
+            # Both constraints matter: an open timeout per backup and an alert per attempt.
+            statement = statement.on_conflict_do_nothing()
         else:
             statement = statement.on_conflict_do_nothing(
                 constraint="uq_alerts_verification_type",
@@ -50,7 +46,7 @@ class MonitoringRepository:
     async def get_alert_for_update(self, alert_id: int) -> Alert | None:
         return await self.session.scalar(select(Alert).where(Alert.id == alert_id).with_for_update())
 
-    async def resolve_timeout(self, backup_id: uuid.UUID) -> None:
+    async def resolve_timeout(self, backup_id: uuid.UUID, verification_id: uuid.UUID | None = None) -> None:
         statement = (
             update(Alert)
             .where(
@@ -60,6 +56,11 @@ class MonitoringRepository:
             )
             .values(resolved_at=func.now())
         )
+        if verification_id is not None:
+            statement = statement.where(or_(
+                Alert.verification_id == verification_id,
+                Alert.verification_id.is_(None),  # Legacy alerts created before attempts existed.
+            ))
         await self.session.execute(statement)
 
     async def commit(self) -> None:

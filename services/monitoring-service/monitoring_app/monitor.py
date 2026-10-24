@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 logger = logging.getLogger(__name__)
 result_url = "http://backup-service:8000/api/backups/results"
-backup_url = "http://backup-service:8000/api/backups/"
+backup_url = "http://backup-service:8000/api/backups/verifications"
 
 async def monitor() -> None:
     engine = create_async_engine(os.environ["DATABASE_URL"])
@@ -46,20 +46,22 @@ async def monitor() -> None:
             for result in results:
                 if result["status"] in ("FAILED", "VERIFIED"):
                     try:
-                        await repository.resolve_timeout(uuid.UUID(result["id"]))
+                        await repository.resolve_timeout(
+                            uuid.UUID(result["backup_id"]), uuid.UUID(result["id"]),
+                        )
                         await repository.commit()
                     except Exception:
                         await repository.rollback()
                         raise
                     continue
-                uploaded_at = datetime.datetime.fromisoformat(result["upload_date"].replace("Z", "+00:00"))
+                requested_at = datetime.datetime.fromisoformat(result["requested_at"].replace("Z", "+00:00"))
                 now = datetime.datetime.now(datetime.timezone.utc)
-                if now - uploaded_at <= datetime.timedelta(minutes=15):
+                if now - requested_at <= datetime.timedelta(minutes=15):
                     continue
                 alert = Alert(
-                    backup_id=uuid.UUID(result["id"]),
-                    verification_id=None,
-                    message="Timeout",
+                    backup_id=uuid.UUID(result["backup_id"]),
+                    verification_id=uuid.UUID(result["id"]),
+                    message="Verification has been waiting for a result for over 15 minutes",
                     type=AlertType.VERIFICATION_TIMEOUT
                 )
                 try:

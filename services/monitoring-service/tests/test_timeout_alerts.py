@@ -89,9 +89,9 @@ class TimeoutAlertTests(unittest.IsolatedAsyncioTestCase):
         results_response.json.return_value = []
         backups_response = Mock()
         backups_response.json.return_value = [
-            {"id": str(completed), "status": status},
-            {"id": str(pending), "status": "RECEIVED",
-             "upload_date": "2020-01-01T00:00:00Z"},
+            {"id": str(verification_id), "backup_id": str(completed), "status": status},
+            {"id": str(uuid.uuid4()), "backup_id": str(pending), "status": "QUEUED",
+             "requested_at": "2020-01-01T00:00:00Z"},
         ]
 
         async def snapshot():
@@ -120,6 +120,38 @@ class TimeoutAlertTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_failed_backup_closes_timeout_but_preserves_failure_alert(self):
         await self.check_terminal_resolution("FAILED")
+
+    async def test_timeout_uses_request_time_instead_of_backup_age(self):
+        fresh_id, stale_id = uuid.uuid4(), uuid.uuid4()
+        attempts = [
+            {"id": str(fresh_id), "backup_id": str(self.backup_ids[0]), "status": "QUEUED",
+             "requested_at": datetime.now(timezone.utc).isoformat(), "upload_date": "2020-01-01T00:00:00Z"},
+            {"id": str(stale_id), "backup_id": str(self.backup_ids[1]), "status": "QUEUED",
+             "requested_at": "2020-01-01T00:00:00Z"},
+        ]
+        with patch.dict(os.environ, DATABASE_URL=os.environ["TEST_DATABASE_URL"]), \
+             patch("monitoring_app.monitor.requests.get") as get:
+            get.return_value.json.side_effect = [[], attempts]
+            await monitor()
+        async with self.sessions() as session:
+            rows = (await session.scalars(select(Alert).where(Alert.backup_id.in_(self.backup_ids)))).all()
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0].verification_id, stale_id)
+
+    async def test_old_terminal_attempt_does_not_close_new_timeout(self):
+        backup_id = self.backup_ids[0]
+        active_id = uuid.uuid4()
+        await self.add(backup_id, verification_id=active_id)
+        attempts = [
+            {"id": str(uuid.uuid4()), "backup_id": str(backup_id), "status": "VERIFIED"},
+            {"id": str(active_id), "backup_id": str(backup_id), "status": "QUEUED",
+             "requested_at": "2020-01-01T00:00:00Z"},
+        ]
+        with patch.dict(os.environ, DATABASE_URL=os.environ["TEST_DATABASE_URL"]), \
+             patch("monitoring_app.monitor.requests.get") as get:
+            get.return_value.json.side_effect = [[], attempts]
+            await monitor()
+        self.assertEqual(await self.count(unresolved=True), 1)
 
 
 if __name__ == "__main__":
