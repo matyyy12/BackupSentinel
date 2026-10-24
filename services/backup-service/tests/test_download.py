@@ -27,7 +27,7 @@ class DownloadTests(unittest.IsolatedAsyncioTestCase):
         self.key = f"{self.backup_id}.dump"
         self.repository = AsyncMock()
         self.repository.get_backup.return_value = SimpleNamespace(storage_key=self.key, filename="original.dump")
-        service = BackupService(self.repository, AsyncMock(), AsyncMock())
+        service = BackupService(self.repository, AsyncMock(), AsyncMock(), AsyncMock())
         self.app = FastAPI()
         register_exception_handlers(self.app)
         self.app.include_router(router, prefix="/api")

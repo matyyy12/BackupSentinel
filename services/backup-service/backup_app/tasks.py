@@ -4,7 +4,7 @@ import os
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from backup_app.celery_app import app
-from backup_app.repository import BackupRepository, BackupResultRepository, OutboxRepository
+from backup_app.repository import BackupRepository, BackupResultRepository, OutboxRepository, VerificationRepository
 from backup_app.schemas import VerificationResult
 from backup_app.service import BackupService
 
@@ -18,7 +18,7 @@ async def save_verification_result(request: VerificationResult) -> None:
     Session = async_sessionmaker(engine, expire_on_commit=False)
     try:
         async with Session() as session:
-            service = BackupService(BackupRepository(session), BackupResultRepository(session), OutboxRepository(session))
+            service = BackupService(BackupRepository(session), BackupResultRepository(session), OutboxRepository(session), VerificationRepository(session))
             request = VerificationResult.model_validate(request)
             await service.save_backup_status(request)
     finally:

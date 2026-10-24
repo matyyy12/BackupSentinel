@@ -8,3 +8,7 @@ class NotFoundError(ApplicationError):
 
 class BackupFileNotFoundError(NotFoundError):
     pass
+
+
+class ConflictError(ApplicationError):
+    status_code = 409

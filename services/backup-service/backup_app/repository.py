@@ -1,10 +1,10 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backup_app.models import Backup, BackupResult, Outbox
+from backup_app.models import Backup, BackupResult, Outbox, Verification, Status
 
 
 class BackupRepository:
@@ -24,6 +24,10 @@ class BackupRepository:
 
     async def get_backup_for_update(self, backup_id: uuid.UUID) -> Backup | None:
         return await self.session.scalar(select(Backup).where(Backup.id == backup_id).with_for_update())
+
+    async def delete(self, backup_id: uuid.UUID) -> None:
+        # Database foreign keys cascade to results, attempts and outbox messages.
+        await self.session.execute(delete(Backup).where(Backup.id == backup_id))
 
     async def commit(self) -> None:
         await self.session.commit()
@@ -87,3 +91,28 @@ class OutboxRepository:
 
     async def rollback(self) -> None:
         await self.session.rollback()
+
+
+class VerificationRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def add(self, verification: Verification) -> None:
+        self.session.add(verification)
+        await self.session.flush()
+
+    async def get(self, verification_id: uuid.UUID) -> Verification | None:
+        return await self.session.get(Verification, verification_id)
+
+    async def get_active(self, backup_id: uuid.UUID) -> Verification | None:
+        return await self.session.scalar(select(Verification).where(
+            Verification.backup_id == backup_id,
+            Verification.status.in_([Status.QUEUED, Status.VERIFYING]),
+        ))
+
+    async def get_all(self, backup_id: uuid.UUID | None = None) -> list[Verification]:
+        statement = select(Verification)
+        if backup_id is not None:
+            statement = statement.where(Verification.backup_id == backup_id)
+        statement = statement.order_by(Verification.requested_at.desc(), Verification.id.desc())
+        return list((await self.session.scalars(statement)).all())
