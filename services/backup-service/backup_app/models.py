@@ -3,7 +3,7 @@ import uuid
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import UUID, String, DateTime, func, BigInteger, Enum as SqlEnum, ForeignKey, JSON
+from sqlalchemy import UUID, String, DateTime, func, BigInteger, Enum as SqlEnum, ForeignKey, JSON, Index, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -33,7 +33,7 @@ class BackupResult(Base):
     __tablename__ = "backup_results"
     id: Mapped[int] = mapped_column(primary_key=True, nullable=False)
 
-    verification_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, unique=True)
+    verification_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("verifications.id"), nullable=False, unique=True)
     backup_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("backups.id", ondelete="CASCADE"), index=True, nullable=False)
     status: Mapped[Status] = mapped_column(SqlEnum(Status), nullable=False, default=Status.RECEIVED)
     started_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -41,6 +41,19 @@ class BackupResult(Base):
     error_message: Mapped[str | None] = mapped_column(String, nullable=True)
 
     backup: Mapped["Backup"] = relationship(back_populates="results")
+
+
+class Verification(Base):
+    __tablename__ = "verifications"
+    __table_args__ = (
+        Index("uq_verifications_active_backup", "backup_id", unique=True,
+              postgresql_where=text("status IN ('QUEUED', 'VERIFYING')")),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    backup_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("backups.id", ondelete="CASCADE"), nullable=False, index=True)
+    requested_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    status: Mapped[Status] = mapped_column(SqlEnum(Status), nullable=False, default=Status.QUEUED)
 
 class Outbox(Base):
     __tablename__ = "outbox"

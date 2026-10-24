@@ -23,3 +23,12 @@ class VerificationResult(BaseModel):
     started_at: datetime.datetime
     finished_at: datetime.datetime
     error_message: str | None
+
+
+class VerificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    backup_id: uuid.UUID
+    requested_at: datetime.datetime
+    status: Status
