@@ -1,6 +1,24 @@
 name: backupsentinel
 
 services:
+  frontend:
+    image: backupsentinel-frontend
+    build: ./frontend
+    environment:
+      BACKUP_API_TARGET: http://backup-service:8000
+      MONITORING_API_TARGET: http://monitoring-service:8000
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html:ro
+      - ./frontend/vite.config.js:/app/vite.config.js:ro
+    depends_on:
+      backup-service:
+        condition: service_started
+      monitoring-service:
+        condition: service_started
+
   backup-db:
     image: postgres:17-bookworm
     environment:
