@@ -1,0 +1,441 @@
+.workspace-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 28px;
+}
+.workspace-kicker {
+  font:
+    9px "DM Sans",
+    sans-serif;
+  font-weight: 600;
+  letter-spacing: 1.8px;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 12px;
+}
+.workspace-heading h1 {
+  font-size: clamp(26px, 2.7vw, 38px);
+  letter-spacing: -1.3px;
+}
+.workspace-heading p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin-top: 9px;
+}
+.workspace-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 9px;
+  margin: 20px 0;
+}
+.workspace-foot i {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  background: var(--accent);
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.workspace-empty {
+  padding: 35px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.workspace-muted {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.explorer-frame {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px #0f172a04;
+}
+.explorer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.explorer-toolbar > span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 600;
+  font-size: 12px;
+}
+.explorer-toolbar b {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  padding: 3px 7px;
+  border-radius: 5px;
+}
+.explorer-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px;
+  color: var(--muted);
+  max-width: 230px;
+}
+.explorer-toolbar input {
+  width: 100%;
+  min-width: 0;
+  background: none;
+  border: 0;
+  color: var(--text);
+  outline: 0;
+  font-size: 11px;
+}
+.explorer-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  min-height: 610px;
+}
+.explorer-files {
+  max-height: 740px;
+  overflow-y: auto;
+}
+.explorer-list-heading {
+  padding: 16px 22px;
+  color: var(--muted);
+  font-size: 8px;
+  letter-spacing: 1.2px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+}
+.explorer-file {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  background: none;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  text-align: left;
+  padding: 21px 18px;
+  color: var(--text);
+}
+.explorer-file.selected {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+.explorer-file:hover {
+  background: var(--accent-soft);
+}
+.explorer-file-icon {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.explorer-file.selected .explorer-file-icon {
+  color: var(--accent);
+}
+.explorer-file-name {
+  min-width: 0;
+  flex: 1;
+}
+.explorer-file-name strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.explorer-file-name small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 7px;
+}
+.explorer-file > svg {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.explorer-details {
+  border-left: 1px solid var(--border);
+  padding: 29px 25px;
+  background: color-mix(in srgb, var(--canvas) 45%, var(--surface));
+}
+.detail-file-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 68px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--accent);
+  background: var(--surface);
+  margin-bottom: 25px;
+}
+.explorer-details h2 {
+  font-family: Manrope, sans-serif;
+  font-size: 20px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  letter-spacing: -0.6px;
+  margin-bottom: 12px;
+}
+.explorer-details .workspace-kicker {
+  font-size: 8px;
+}
+.explorer-details dl {
+  margin: 26px 0;
+}
+.explorer-details dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 15px 0;
+  font-size: 10px;
+}
+.explorer-details dt {
+  color: var(--muted);
+}
+.explorer-details dd {
+  margin: 0;
+  text-align: right;
+  color: var(--text);
+}
+.explorer-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.explorer-actions .button {
+  padding: 10px 12px;
+  font-size: 10px;
+}
+.detail-history {
+  border-top: 1px solid var(--border);
+  margin-top: 29px;
+  padding-top: 24px;
+}
+.detail-history h3 {
+  font-size: 12px;
+  margin-bottom: 21px;
+}
+.attempt-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.attempt-timeline li {
+  display: flex;
+  position: relative;
+  gap: 14px;
+  padding-bottom: 23px;
+}
+.attempt-timeline li:not(:last-child):before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 9px;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+.timeline-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  margin-top: 3px;
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.attempt-timeline strong {
+  font-size: 11px;
+  font-weight: 500;
+  display: block;
+}
+.attempt-timeline strong span {
+  color: var(--muted);
+  margin-left: 5px;
+}
+.attempt-timeline small {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  margin: 7px 0 10px;
+}
+.detail-id {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 9px;
+  color: var(--muted);
+  line-height: 1.8;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  margin-top: 12px;
+}
+.explorer-toolbar select {
+  flex-shrink: 0;
+}
+.toolbar-caption {
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  color: var(--muted);
+  margin-left: auto;
+}
+.alert-message {
+  grid-column: 1/-1;
+  margin: 25px 0;
+}
+.alert-message h3 {
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+.alert-message pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #192536;
+  border: 1px solid var(--border);
+  padding: 14px;
+  border-radius: 7px;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.resolve-button {
+  margin-top: 24px;
+  grid-column: 1/-1;
+  justify-self: start;
+}
+.alert-explorer .detail-id {
+  margin-top: 15px;
+}
+.alert-explorer .error {
+  margin-top: 15px;
+  grid-column: 1/-1;
+}
+.alert-explorer .workspace-muted {
+  margin-top: 20px;
+}
+@media (max-width: 1350px) {
+  .explorer-columns {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+  .explorer-file {
+    gap: 9px;
+    padding: 18px 12px;
+  }
+  .explorer-file .badge {
+    font-size: 8px;
+  }
+  .explorer-file > svg {
+    display: none;
+  }
+  .explorer-toolbar {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 1050px) {
+  .explorer-columns {
+    grid-template-columns: 1fr;
+  }
+  .explorer-files {
+    max-height: 350px;
+  }
+  .explorer-details {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 25px;
+  }
+  .detail-file-icon {
+    display: none;
+  }
+  .explorer-details > .workspace-kicker,
+  .explorer-details > h2,
+  .explorer-details > .badge,
+  .explorer-details > .explorer-actions {
+    grid-column: 1;
+  }
+  .explorer-details > .badge {
+    justify-self: start;
+  }
+  .explorer-details > dl {
+    grid-column: 2;
+    grid-row: 1/5;
+    margin-top: 0;
+  }
+  .detail-history,
+  .detail-id {
+    grid-column: 1/-1;
+  }
+}
+@media (max-width: 800px) {
+  .workspace-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .workspace-heading h1 {
+    font-size: 29px;
+  }
+  .workspace-heading p {
+    font-size: 11px;
+  }
+  .explorer-toolbar {
+    padding: 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .explorer-toolbar label {
+    max-width: none;
+    flex: 1;
+    min-width: 130px;
+  }
+  .explorer-toolbar input {
+    font-size: 10px;
+  }
+  .explorer-toolbar > span:first-child {
+    width: 100%;
+  }
+  .explorer-file .badge {
+    max-width: 115px;
+    overflow: hidden;
+  }
+  .explorer-details {
+    padding: 24px 18px;
+    display: block;
+  }
+  .explorer-details dl {
+    margin-top: 25px;
+  }
+  .explorer-file-name strong {
+    font-size: 10px;
+  }
+  .explorer-file-name small {
+    font-size: 9px;
+  }
+  .workspace-foot {
+    font-size: 8px;
+  }
+  .toolbar-caption {
+    margin-left: 0;
+    line-height: 1.8;
+  }
+}
