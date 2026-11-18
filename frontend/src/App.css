@@ -541,3 +541,38 @@ dialog h3 {
     flex-wrap: wrap;
   }
 }
+
+.danger {
+  background: #45262e;
+  color: #fda4af;
+  border-color: #713744;
+}
+.danger:hover:not(:disabled) {
+  background: #602e3a;
+  border-color: #be6479;
+}
+.danger:disabled {
+  cursor: not-allowed;
+}
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border: 1px solid #245366;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.delete-filename {
+  overflow-wrap: anywhere;
+}
+.deletion-hint {
+  line-height: 1.8;
+  margin: 12px 0;
+  grid-column: 1 / -1;
+}

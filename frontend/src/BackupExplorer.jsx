@@ -214,7 +214,20 @@ export default function BackupExplorer({
                     Wynik i działania
                     <Icon name="chevron" size={15} />
                   </button>
+                  <button
+                    className="button danger"
+                    disabled={["QUEUED", "VERIFYING"].includes(selected.status)}
+                    onClick={() => open("delete", selected)}
+                  >
+                    <Icon name="trash" size={15} />
+                    Usuń backup
+                  </button>
                 </div>
+                {["QUEUED", "VERIFYING"].includes(selected.status) && (
+                  <p className="workspace-muted deletion-hint">
+                    Usuwanie będzie dostępne po zakończeniu weryfikacji.
+                  </p>
+                )}
                 <div className="detail-history">
                   <h3>Historia prób</h3>
                   <History

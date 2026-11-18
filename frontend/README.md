@@ -6,6 +6,7 @@ Osobny projekt React w JavaScript (JSX), uruchamiany przez Vite. Panel korzysta 
 - listę plików z wyszukiwaniem i filtrem statusu,
 - formularz przesłania pliku z wersją PostgreSQL,
 - historię weryfikacji, ostatni wynik, pobieranie pliku i zlecanie kolejnej próby,
+- usuwanie kopii z potwierdzeniem i blokadą podczas aktywnej weryfikacji,
 - listę aktywnych alertów, ich szczegóły i oznaczanie jako rozwiązane.
 
 Interfejs ma stały ciemny motyw z turkusowym akcentem. Backupy i aktywne alerty mają wspólny układ eksploratora: lista po lewej, szczegóły wybranej pozycji po prawej. Na mniejszych ekranach panele układają się pionowo.

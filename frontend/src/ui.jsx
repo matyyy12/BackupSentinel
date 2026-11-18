@@ -22,6 +22,7 @@ const paths = {
   close: "M6 6l12 12 M18 6 6 18",
   download: "M12 3v12 M7 10l5 5 5-5 M4 16v5h16v-5",
   chevron: "m9 5 7 7-7 7",
+  trash: "M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7",
 };
 function Icon({ name, size = 20 }) {
   return (
