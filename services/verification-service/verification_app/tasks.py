@@ -2,6 +2,8 @@ import asyncio
 import datetime
 import uuid
 
+from celery.exceptions import SoftTimeLimitExceeded
+
 from verification_app.celery_app import app
 from verification_app.restore import DockerUnavailableError, restore
 from verification_app.outbox import get_saved_result, save_result
@@ -9,7 +11,8 @@ from verification_app.schemas import VerificationRequest, VerificationResponse, 
 from requests.exceptions import ConnectionError, Timeout
 
 
-@app.task(name="verification_restore", bind=True, max_retries=3)
+@app.task(name="verification_restore", bind=True, max_retries=3,
+          soft_time_limit=420, time_limit=480)
 def verification_restore(self,
                          verification_id: str,
                          backup_id: uuid.UUID,
@@ -29,6 +32,13 @@ def verification_restore(self,
     started_at = datetime.datetime.now(datetime.timezone.utc)
     try:
         result = restore(request.storage_key)
+    except SoftTimeLimitExceeded:
+        result = {
+            "status": Status.FAILED,
+            "started_at": started_at,
+            "finished_at": datetime.datetime.now(datetime.timezone.utc),
+            "error_message": "Verification exceeded its execution time limit (420 seconds)",
+        }
     except (DockerUnavailableError, ConnectionError, Timeout, TimeoutError) as e:
         if self.request.retries < self.max_retries:
             raise self.retry(exc=e, countdown=10 * (2 ** self.request.retries))

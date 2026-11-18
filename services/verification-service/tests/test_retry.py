@@ -1,9 +1,9 @@
 import unittest
 import uuid
 from datetime import datetime, timezone
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, Mock
 
-from celery.exceptions import Retry
+from celery.exceptions import Retry, SoftTimeLimitExceeded
 from docker.errors import DockerException
 from requests.exceptions import ConnectionError, Timeout
 
@@ -102,6 +102,27 @@ class RetryTests(unittest.TestCase):
         with patch("verification_app.tasks.restore", return_value=result):
             with self.assertRaisesRegex(RuntimeError, "database unavailable"):
                 verification_restore.run(**self.args)
+
+    def test_soft_time_limit_saves_failure_without_retry(self):
+        with patch("verification_app.tasks.restore", side_effect=SoftTimeLimitExceeded()), \
+             patch.object(verification_restore, "retry") as retry:
+            verification_restore.run(**self.args)
+        retry.assert_not_called()
+        result = self.save_result.call_args.args[0]
+        self.assertEqual(result.status.value, "FAILED")
+        self.assertEqual(str(result.verification_id), self.args["verification_id"])
+        self.assertIn("time limit", result.error_message)
+
+    def test_soft_time_limit_during_restore_cleans_up_container(self):
+        client = Mock()
+        container = client.containers.run.return_value
+        container.status = "running"
+        container.exec_run.side_effect = [Mock(exit_code=0), SoftTimeLimitExceeded()]
+        with patch("verification_app.restore.docker.from_env", return_value=client):
+            with self.assertRaises(SoftTimeLimitExceeded):
+                restore("test.dump")
+        container.remove.assert_called_once_with(force=True, v=True)
+        client.close.assert_called_once()
 
 
 if __name__ == "__main__":
