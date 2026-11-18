@@ -61,6 +61,7 @@ services:
 
   backup-worker:
     image: backupsentinel-backup-service
+    stop_grace_period: 60s
     build: ./services/backup-service
     command: ["celery", "-A", "backup_app.celery_app:app", "worker", "-Q", "backup", "--loglevel=info", "--concurrency=1"]
     environment:
@@ -87,6 +88,7 @@ services:
 
   verification-worker:
     image: backupsentinel-verification-service
+    stop_grace_period: 9m
     build: ./services/verification-service
     command: ["celery", "-A", "verification_app.celery_app:app", "worker", "-Q", "verification", "--loglevel=info", "--concurrency=1"]
     environment:
@@ -170,6 +172,7 @@ services:
 
   monitoring-worker:
     image: backupsentinel-monitoring-service
+    stop_grace_period: 60s
     build: ./services/monitoring-service
     command: ["celery", "-A", "monitoring_app.celery_app:app", "worker", "-Q", "monitoring", "--loglevel=info", "--concurrency=1"]
     environment:
